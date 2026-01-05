@@ -14,6 +14,39 @@ OWASP® ESAPI (The OWASP Enterprise Security API) is a free, open source, web ap
 </tr>
 </table>
 
+# Jakarta EE Support
+**IMPORTANT:**
+ESAPI has supported the Jakarta Servlet API (i.e., **jakarta.servlet.api**) since release
+2.5.3.0.  (Unfortunately, this information was previously missing in this **README** file.)
+
+Therefore, for release 2.5.3.0 and later versions of ESAPI, ESAPI ought to be able to support Spring Boot 3, Spring 6, Tomcat 10,
+and other applications or libraries requiring Jarkata EE. (If you find a case where it does
+not, please file a GitHub issue for it.)
+
+The ESAPI jar file supporting Jakarta will be named esapi-_version_-jakarta.jar. To use that
+specific Jakarta version of ESAPI, in Maven, you would specify your ESAPI dependency in your
+**pom.xml** as:
+```xml
+<dependency>
+    <groupId>org.owasp.esapi</groupId>
+    <artifactId>esapi</artifactId>
+    <version>2.7.0.0</version>  <!-- Preferably the latest version, but > 2.5.3.0 -->
+    <classifier>jakarta</classifier>
+</dependency>
+```
+(or any other version later than 2.5.3.0). Thanks to Jonathon Putney for creating a PR to
+fix this. There is a long discussion in GitHub Discussion [#768](https://github.com/ESAPI/esapi-java-legacy/discussions/768)
+where this was first announced, for those of you have insomnia or really long attention
+spans and are interested in the approaches that were tried.
+
+Of course, ESAPI also still continues to support the older Java EE Servlet API (i.e., **javax.servlet** namespace) as well. In
+fact, without the
+```xml
+<classifier>jakarta</classifier>
+```
+that's the version that will be used by default.
+
+
 # A word about ESAPI vulnerabilities
 A summary of all the vulnerabilities that we have written about in either the
 ESAPI Security Bulletins or in the GitHub Security Advisories may be found
@@ -32,7 +65,7 @@ Development for the "next generation" of ESAPI (starting with ESAPI 3.0), will b
 GitHub repository at [https://github.com/ESAPI/esapi-java](https://github.com/ESAPI/esapi-java).
 
 **IMPORTANT NOTES:**
-* The default branch for ESAPI legacy is the 'develop' branch (rather than the 'main' (formerly 'master') branch), where future development, bug fixes, etc. are now being done. The 'main' branch is now marked as "protected"; it reflects the latest stable ESAPI release (2.5.1.0 as of this date). Note that this change of making the 'develop' branch the default may affect any pull requests that you were intending to make.
+* The default branch for ESAPI legacy is the 'develop' branch (rather than the 'main' (formerly 'master') branch), where future development, bug fixes, etc. are now being done. The 'main' branch is now marked as "protected"; it reflects the latest stable ESAPI release (2.5.3.1 as of this date). Note that this change of making the 'develop' branch the default may affect any pull requests that you were intending to make.
 * Also, the *minimal* baseline Java version to use ESAPI is now Java 8. (This was changed from Java 7 during the 2.4.0.0 release.)
 * Support was dropped for Log4J 1 during ESAPI 2.5.0.0 release. If you need it, configure it via SLF4J. See  the
   [2.5.0.0 release notes](https://github.com/ESAPI/esapi-java-legacy/blob/develop/documentation/esapi4java-core-2.5.0.0-release-notes.txt)
@@ -51,7 +84,7 @@ The ESAPI release notes may be found in ESAPI's "documentation" directory. They 
 See the GitHub [Releases](https://github.com/ESAPI/esapi-java-legacy/releases) information for a list of releases which generally
 link to the specific release notes.
 
-### Really IMPORTANT information in release notes
+### Really IMPORTANT information in release notes - Ignore at your peril
 * Starting with ESAPI 2.2.1.0, important details changed reading the ESAPI
   Logger. If you have are getting things like ClassNotFoundException, you
   probably have not read it. Please be sure to read this specific section
@@ -64,9 +97,15 @@ link to the specific release notes.
   (at least the beginning portion) for some important notes that likely will affect your use of ESAPI! You have been warned!!!
 * ESAPI 2.3.0.0 is the last release to support Java 7 as the minimal JDK.
   Starting with release 2.4.0.0, Java 8 or later is required.
+* Starting with ESAPI 2.5.4.0, if you were using ESAPI's default logger, JUL
+  (i.e., you had the property **ESAPI.Logger** set to "org.owasp.esapi.logging.java.JavaLogFactory"),
+  then you must remove (or rename) the old ESAPI configuration file **esapi-java-logger.properties**.
+  Failure to do so will cause ESAPI to throw a `ConfigurationException`, thereby
+  preventing your application from starting. For important additional details, please see
+  the ESAPI GitHub Discussion https://github.com/ESAPI/esapi-java-legacy/discussions/841.
 
 # Locating ESAPI Jar files
-The [latest ESAPI release](https://github.com/ESAPI/esapi-java-legacy/releases/latest) is 2.5.1.0.
+The [latest ESAPI release](https://github.com/ESAPI/esapi-java-legacy/releases/latest) is 2.7.0.0.
 All the *regular* ESAPI jars, with the exception of the ESAPI configuration
 jar (i.e., esapi-2.#.#.#-configuration.jar) and its associated detached
 GPG signature, are available from Maven Central. The ESAPI configuration
@@ -88,11 +127,44 @@ to be using such classes directly in your code. At the ESAPI team's discretion,
 it will also not apply for any known exploitable vulnerabilities for which
 no available workaround exists.
 
+## Exceptions to Deprecation Policy
+We will make some exceptions to the normal 2 year period. In particular, in the
+cases were we believe that keeping a specific deprecated class or method around
+can introduce security issues (generally because many of you have a habit of
+completely ignoring deprecation warnings), we sometimes will shorten that 2 year
+period. When we decide to do that, we will announce that as part of the
+deprecation message.
+
+## Log4J 1.x Removal
 **IMPORTANT NOTES:** As of ESAPI 2.5.0.0, all the Log4J 1.x related code
 has been removed from the ESAPI code base (with the exception of some
 references in documentation). If you must, you still should be able to
 use Log4J 1.x logging via ESAPI SLF4J support. See the ESAPI 2.5.0.0 release
 notes for further details.
+
+# Quickstart - Maven Example
+### Step 1: Add the required dependencies.
+See https://mvnrepository.com/artifact/org.owasp.esapi/esapi/latest, the tab for
+whatever build tool you are using. If you need the Jakarta version, make sure to
+add
+```xml
+    <classifier>jakarta</classifier>
+```
+and include whatever jakara.servlet:jakarta.servlet-api version you are using with
+```xml
+    <scope>provided</scope>
+```
+### Step 2: Obtain the 2 properties files ESAPI.properties and validation.properties
+1. Download these 2 files from the ESAPI release that you are using from https://github.com/ESAPI/esapi-java-legacy/releases
+   and download the esapi-<release>-configuration.jar file (and the .asc file if you wish to confirm the GPG signature).
+2. Unjar that configuration file that you just downloaded and find the 2
+   properties files under the "configuration/esapi" subdirectory where you
+   unjarred the config jar.
+3. Read through Javadoc for [DefaultSecurityConfiguration](https://javadoc.io/static/org.owasp.esapi/esapi/2.5.4.0/org/owasp/esapi/reference/DefaultSecurityConfiguration.html)
+   to understand the ways that ESAPI locates these files and then use the mechanism that works best for you. Copy the 2 properties
+   files from the 'configuration/esapi' directory to the directory where you
+   choose to have them reside. Note that you may also edit them to customize
+   them according to your needs.
 
 # Contributing to ESAPI legacy
 ### How can I contribute or help with fix bugs?
@@ -167,19 +239,6 @@ does not pull in any additional 3rd party libraries, toss it out there for
 discussion or even show us how it works with a PR. (Note that we vet all pull
 requests, including coding style of any contributions, so please use the same
 coding style found in the files you are already editing.)
-
-# Ancient History
-### What happened to Google code?
-In mid-2014 ESAPI migrated all code and issues from Google Code to GitHub. This migration was completed in November 2014.
-
-### What about the issues still located on Google Code?
-All issues from Google Code have been migrated to GitHub issues. We now
-use GitHut Issues for reporting everything *except* security vulnerabilities.
-Other bug tracking sites are undoubtedly more advanced, but as developers,
-we do not want to spent time having to close issues from multiple bug-tracking
-systems. Therefore, until the synchronization happens with the Atlassian Jira
-instance that we have (but are not using; see GitHub issue #371), please
-ONLY use GitHub Issues for reporting bugs.
 
 # References: Where to Find More Information on ESAPI
 **OWASP Wiki:** https://owasp.org/www-project-enterprise-security-api/

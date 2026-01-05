@@ -98,6 +98,7 @@ import org.owasp.esapi.reference.validation.StringValidationRule;
 public class DefaultValidator implements org.owasp.esapi.Validator {
     private static Logger logger = ESAPI.log();
     private static volatile Validator instance = null;
+    private static boolean alreadyLogged = false;
 
     public static Validator getInstance() {
         if ( instance == null ) {
@@ -373,35 +374,6 @@ public class DefaultValidator implements org.owasp.esapi.Validator {
         }
         // error has been added to list, so return null
         return safeDate;
-    }
-
-    /**
-     * {@inheritDoc}
-     * <p>
-     * This implementation does not throw {@link IntrusionException}.
-     */
-    @Override
-    public boolean isValidSafeHTML(String context, String input, int maxLength, boolean allowNull) {
-        try {
-            getValidSafeHTML( context, input, maxLength, allowNull);
-            return true;
-        } catch( Exception e ) {
-            return false;
-        }
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public boolean isValidSafeHTML(String context, String input, int maxLength, boolean allowNull, ValidationErrorList errors) throws IntrusionException {
-        try {
-            getValidSafeHTML( context, input, maxLength, allowNull);
-            return true;
-        } catch( ValidationException e ) {
-            errors.addError(context, e);
-            return false;
-        }
     }
 
     /**

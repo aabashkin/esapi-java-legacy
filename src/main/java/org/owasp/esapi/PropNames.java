@@ -87,6 +87,8 @@ public final class PropNames {
     public static final String ADDITIONAL_ALLOWED_CIPHER_MODES                                                  = "Encryptor.cipher_modes.additional_allowed";
     public static final String KDF_PRF_ALG                                                                      = "Encryptor.KDF.PRF";
     public static final String PRINT_PROPERTIES_WHEN_LOADED                                                     = "ESAPI.printProperties";
+    public static final String ACCEPTED_UNSAFE_METHOD_NAMES                                                     = "ESAPI.dangerouslyAllowUnsafeMethods.methodNames";
+    public static final String ACCEPTED_UNSAFE_METHODS_JUSTIFICATION                                            = "ESAPI.dangerouslyAllowUnsafeMethods.justification";
 
     public static final String WORKING_DIRECTORY                                                                = "Executor.WorkingDirectory";
     public static final String APPROVED_EXECUTABLES                                                             = "Executor.ApprovedExecutables";
@@ -100,6 +102,8 @@ public final class PropNames {
     public static final String UPLOAD_TEMP_DIRECTORY                                                            = "HttpUtilities.UploadTempDir";
     public static final String APPROVED_UPLOAD_EXTENSIONS                                                       = "HttpUtilities.ApprovedUploadExtensions";
     public static final String MAX_UPLOAD_FILE_BYTES                                                            = "HttpUtilities.MaxUploadFileBytes";
+    public static final String MAX_UPLOAD_FILE_COUNT                                                            = "HttpUtilities.MaxUploadFileCount";
+    public static final String FILEUPLOAD_ALLOW_ANONYMOUS_USERS                                                 = "HttpUtilities.FileUploadAllowAnonymousUser";
     public static final String RESPONSE_CONTENT_TYPE                                                            = "HttpUtilities.ResponseContentType";
     public static final String HTTP_SESSION_ID_NAME                                                             = "HttpUtilities.HttpSessionIdName";
 
@@ -109,6 +113,7 @@ public final class PropNames {
     public static final String LOG_ENCODING_REQUIRED                                                            = "Logger.LogEncodingRequired";
     public static final String LOG_APPLICATION_NAME                                                             = "Logger.LogApplicationName";
     public static final String LOG_SERVER_IP                                                                    = "Logger.LogServerIP";
+    public static final String LOG_PREFIX                                                                       = "Logger.LogPrefix";
 
     public static final String VALIDATION_PROPERTIES                                                            = "Validator.ConfigurationFile";
     public static final String VALIDATION_PROPERTIES_MULTIVALUED                                                = "Validator.ConfigurationFile.MultiValued";
@@ -126,7 +131,7 @@ public final class PropNames {
     public static final String DISCARD_LOGSPECIAL                                                               = "org.owasp.esapi.logSpecial.discard";
 
     /*
-     * Implementation Keys
+     * Implementation Keys for the various major ESAPI components.
      */
     public static final String LOG_IMPLEMENTATION                                                               = "ESAPI.Logger";
     public static final String AUTHENTICATION_IMPLEMENTATION                                                    = "ESAPI.Authenticator";

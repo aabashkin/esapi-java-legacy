@@ -45,6 +45,11 @@ import org.owasp.esapi.codecs.XMLEntityCodec;
 import org.owasp.esapi.codecs.JSONCodec;
 import org.owasp.esapi.errors.EncodingException;
 import org.owasp.esapi.errors.IntrusionException;
+import org.owasp.esapi.errors.ConfigurationException;
+import org.owasp.esapi.errors.NotConfiguredByDefaultException;
+
+import static org.owasp.esapi.PropNames.ACCEPTED_UNSAFE_METHOD_NAMES;
+import static  org.owasp.esapi.PropNames.ACCEPTED_UNSAFE_METHODS_JUSTIFICATION;
 
 
 /**
@@ -271,11 +276,80 @@ public class DefaultEncoder implements Encoder {
         return vbScriptCodec.encode(IMMUNE_VBSCRIPT, input);
     }
 
+    ///////////////////////////////////////////////////////////////////////
+    // TODO - Move this method to some utility class (where?) when we
+    //        are ready to use it on other methods than just encodeForSQL.
+    //
+    //        At that time, also move the method ESAPI.isMethodExplicityEnabled
+    //        to the same utility class.
+    /**
+     * Utility class to throw {@code NotConfiguredByDefaultException} if the
+     * specified method name is not enabled by default.
+     *
+     * @param fullyQualifiedMethodName is the method name that we are checkig if
+     *                                 enabled in ESAPI.properties.
+     * @param customAuditMsg is a audit message to log and use in exceptions. If
+     *                       this value passed in is {@code null} or the string
+     *                       "&lt;default&gt;", then a canned message is used to
+     *                       compose the error message.
+     * @param seeAlso is a string that provides additional reference for context
+     *                such as a CVE ID, GHAS Security Advisory, or ESAPI Security Bulletin.
+     * @throws NotConfiguredByDefaultException if the specified method name is
+     *                not listed in the property <b>ESAPI.dangerouslyAllowUnsafeMethods.methodNames</b>
+     *                in the <b>ESAPI.properties</b> file.
+     */
+    private void ensureDangerousMethodExplicitlyEnabled(String fullyQualifiedMethodName,
+                                                        String customAuditMsg,
+                                                        String seeAlso) {
+
+        String auditMsg = null;
+        if ( customAuditMsg == null || customAuditMsg.equalsIgnoreCase("<default>") ) {
+            // Special case. Compose an audit message from a canned template.
+            // TODO: Null / empty check for 'seeAlso'.
+            auditMsg = "SIEM ALERT: Method '" + fullyQualifiedMethodName + "' has been invoked despite having credible " +
+                       "security concerns; for additional details, see " + seeAlso + ".";
+        } else {
+            auditMsg = customAuditMsg;  // Use the custom audit message
+        }
+ 
+        if ( ! ESAPI.isMethodExplicityEnabled( fullyQualifiedMethodName ) ) {
+            throw new NotConfiguredByDefaultException( "Method not explicitly enabled in property " +
+                                                        ACCEPTED_UNSAFE_METHOD_NAMES + "; " + auditMsg );
+        } else {
+            String justification = null;
+            try {
+                // This throws a ConfigurationException (rather than returning null if
+                // the property name is not found so we need to handle that.
+                justification = ESAPI.securityConfiguration().getStringProp( ACCEPTED_UNSAFE_METHODS_JUSTIFICATION );
+            } catch ( ConfigurationException cex ) {
+                logger.debug( Logger.EVENT_FAILURE, "Property " + ACCEPTED_UNSAFE_METHODS_JUSTIFICATION + " not found.");
+                justification = "None";
+            }
+
+            if ( justification == null || justification.trim().isEmpty() ) {
+                justification = "None";
+            }
+            logger.warning( Logger.SECURITY_FAILURE, auditMsg + " Provided justification: " + justification );
+        }
+        return;
+    }
+
 
     /**
      * {@inheritDoc}
+     *
+     * @deprecated  This method is considered dangerous and not easily made safe and thus under strong
+     *              consideration to be removed within 1 years time after the 2.7.0.0 release. Please
+     *              see the referenced ESAPI Security Bulletin #13 for further details.
      */
+    @Deprecated
     public String encodeForSQL(Codec codec, String input) {
+
+        // This will throw if this method is not explicitly enabled in ESAPI.properties.
+        ensureDangerousMethodExplicitlyEnabled( DefaultEncoder.class.getName() + ".encodeForSQL",
+                                                "<default>",
+                                                "see CVE-2025-5878 and ESAPI Security Bulletin #13 for details" );
+
         if( input == null ) {
             return null;
         }
@@ -309,8 +383,9 @@ public class DefaultEncoder implements Encoder {
         // TODO: replace with LDAP codec
         StringBuilder sb = new StringBuilder();
         // According to Microsoft docs [1,2], the forward slash ('/') MUST be escaped.
-        // According to RFC 4513 Section 3 [3], the forward slash (and other characters) MAY be escaped.
+        // According to RFC 4515 Section 3 [3], the forward slash (and other characters) MAY be escaped.
         // Since Microsoft is a MUST, escape forward slash for all implementations. Also see discussion at [4].
+        // Characters above 0x7F are converted to UTF-8 and then hex encoded in the default case.
         // [1] https://docs.microsoft.com/en-us/windows/win32/adsi/search-filter-syntax
         // [2] https://social.technet.microsoft.com/wiki/contents/articles/5312.active-directory-characters-to-escape.aspx
         // [3] https://tools.ietf.org/search/rfc4515#section-3
@@ -343,7 +418,18 @@ public class DefaultEncoder implements Encoder {
                     sb.append("\\00");
                     break;
                 default:
-                    sb.append(c);
+                    if (c >= 0x80) {
+                        try {
+                            final byte[] u = String.valueOf(c).getBytes("UTF-8");
+                            for (byte b : u) {
+                                sb.append(String.format("\\%02x", b));
+                            }
+                        } catch (UnsupportedEncodingException ex) {
+                            // UTF-8 is always supported
+                        }
+                    } else {
+                        sb.append(c);
+                    }
             }
         }
         return sb.toString();
@@ -365,6 +451,9 @@ public class DefaultEncoder implements Encoder {
         for (int i = 0; i < input.length(); i++) {
             char c = input.charAt(i);
             switch (c) {
+            case '\0':
+                sb.append("\\00");
+                break;
             case '\\':
                 sb.append("\\\\");
                 break;
@@ -390,7 +479,18 @@ public class DefaultEncoder implements Encoder {
                 sb.append("\\;");
                 break;
             default:
-                sb.append(c);
+                if (c >= 0x80) {
+                    try {
+                        final byte[] u = String.valueOf(c).getBytes("UTF-8");
+                        for (byte b : u) {
+                            sb.append(String.format("\\%02x", b));
+                        }
+                    } catch (UnsupportedEncodingException ex) {
+                        // UTF-8 is always supported
+                    }
+                } else {
+                    sb.append(c);
+                }
             }
         }
         // add the trailing backslash if needed
@@ -494,6 +594,9 @@ public class DefaultEncoder implements Encoder {
      * This will extract each piece of a URI according to parse zone as specified in <a href="https://www.ietf.org/rfc/rfc3986.txt">RFC-3986</a> section 3,
      * and it will construct a canonicalized String representing a version of the URI that is safe to
      * run regex against.
+	 * 
+	 * NOTE:  This method will obey the ESAPI.properties configurations for allowing
+	 * Mixed and Multiple Encoding URLs.  
      *
      * @param dirtyUri
      * @return Canonicalized URI string.
@@ -522,7 +625,6 @@ public class DefaultEncoder implements Encoder {
         parseMap.put(UriSegment.SCHEME, dirtyUri.getScheme());
         //authority   = [ userinfo "@" ] host [ ":" port ]
         parseMap.put(UriSegment.AUTHORITY, dirtyUri.getRawAuthority());
-        parseMap.put(UriSegment.SCHEMSPECIFICPART, dirtyUri.getRawSchemeSpecificPart());
         parseMap.put(UriSegment.HOST, dirtyUri.getHost());
         //if port is undefined, it will return -1
         Integer port = new Integer(dirtyUri.getPort());
@@ -530,9 +632,6 @@ public class DefaultEncoder implements Encoder {
         parseMap.put(UriSegment.PATH, dirtyUri.getRawPath());
         parseMap.put(UriSegment.QUERY, dirtyUri.getRawQuery());
         parseMap.put(UriSegment.FRAGMENT, dirtyUri.getRawFragment());
-
-        //Now we canonicalize each part and build our string.
-        StringBuilder sb = new StringBuilder();
 
         //Replace all the items in the map with canonicalized versions.
 
@@ -542,8 +641,7 @@ public class DefaultEncoder implements Encoder {
         boolean allowMixed = sg.getBooleanProp("Encoder.AllowMixedEncoding");
         boolean allowMultiple = sg.getBooleanProp("Encoder.AllowMultipleEncoding");
         for(UriSegment seg: set){
-            String value = canonicalize(parseMap.get(seg), allowMultiple, allowMixed);
-            value = value == null ? "" : value;
+        	String value = "";
             //In the case of a uri query, we need to break up and canonicalize the internal parts of the query.
             if(seg == UriSegment.QUERY && null != parseMap.get(seg)){
                 StringBuilder qBuilder = new StringBuilder();
@@ -571,6 +669,10 @@ public class DefaultEncoder implements Encoder {
                 } catch (UnsupportedEncodingException e) {
                     logger.debug(Logger.EVENT_FAILURE, "decoding error when parsing [" + dirtyUri.toString() + "]");
                 }
+            } else {
+            	String extractedInput = parseMap.get(seg);
+                value = canonicalize(extractedInput, allowMultiple, allowMixed);
+                value = value == null ? "" : value;
             }
             //Check if the port is -1, if it is, omit it from the output.
             if(seg == UriSegment.PORT){
@@ -592,11 +694,16 @@ public class DefaultEncoder implements Encoder {
      */
     protected String buildUrl(Map<UriSegment, String> parseMap){
         StringBuilder sb = new StringBuilder();
-        sb.append(parseMap.get(UriSegment.SCHEME))
-        .append("://")
+        boolean schemePresent = parseMap.get(UriSegment.SCHEME).equals("") ? false : true;
+        
+        if(schemePresent) {
+        	sb.append(parseMap.get(UriSegment.SCHEME))
+        	.append("://");
+        }
+        
         //can't use SCHEMESPECIFICPART for this, because we need to canonicalize all the parts of the query.
         //USERINFO is also deprecated.  So we technically have more than we need.
-        .append(parseMap.get(UriSegment.AUTHORITY) == null || parseMap.get(UriSegment.AUTHORITY).equals("") ? "" : parseMap.get(UriSegment.AUTHORITY))
+        sb.append(parseMap.get(UriSegment.AUTHORITY) == null || parseMap.get(UriSegment.AUTHORITY).equals("") ? "" : parseMap.get(UriSegment.AUTHORITY))
         .append(parseMap.get(UriSegment.PATH) == null || parseMap.get(UriSegment.PATH).equals("") ? ""  : parseMap.get(UriSegment.PATH))
         .append(parseMap.get(UriSegment.QUERY) == null || parseMap.get(UriSegment.QUERY).equals("")
                 ? "" : "?" + parseMap.get(UriSegment.QUERY))

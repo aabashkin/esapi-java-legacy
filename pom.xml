@@ -3,25 +3,17 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.owasp.esapi</groupId>
     <artifactId>esapi</artifactId>
-    <version>2.5.2.0-SNAPSHOT</version>
+    <version>2.7.1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <distributionManagement>
-        <snapshotRepository>
-            <id>sonatype-nexus-snapshots</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>sonatype-nexus-staging</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+      <repository>
+        <id>central</id>
+          <url>https://central.sonatype.org/publish/publish-portal-maven/</url>
         </repository>
+        <!-- You can pick up the ESAPI configuration jars here, under the Assets section of each release. -->
+        <downloadUrl>https://github.com/ESAPI/esapi-java-legacy/releases</downloadUrl>
     </distributionManagement>
-
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>9</version>
-    </parent>
 
     <licenses>
         <license>
@@ -48,7 +40,7 @@
     </description>
 
     <organization>
-        <name>The Open Web Application Security Project (OWASP)</name>
+        <name>The Open Worldwide Application Security Project (OWASP)</name>
         <url>https://owasp.org/</url>
     </organization>
 
@@ -136,17 +128,18 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-	    <version.jmh>1.36</version.jmh>
+        <version.jmh>1.37</version.jmh>
+        <version.findsecbugs>2.0.0-M3</version.findsecbugs>
+        <version.fluido>2.0.0-M11</version.fluido>  <!-- Version 2.1.0 is available, but fails with this min Maven. -->
         <version.powermock>2.0.9</version.powermock>
-        <version.spotbugs>4.7.3</version.spotbugs>
-        <version.findsecbugs>1.12.0</version.findsecbugs>
-        <version.spotbugs.maven>4.7.3.0</version.spotbugs.maven>
-        <version.surefire>3.0.0-M7</version.surefire>
+        <version.spotbugs>4.9.3</version.spotbugs>
+        <version.spotbugs.maven>4.9.3.1</version.spotbugs.maven>
+        <version.surefire>3.5.3</version.surefire>
         <project.java.target>1.8</project.java.target>
             <!-- TODO: Be sure to update. Should be date of previous official release -->
             <!-- Exact date in the form 'yyyy-dd-yy 00:00:00' should be used. You can find the previous release date -->
-            <!-- n the previous release notes file under the 'documentation/' directory. -->
-        <date.prev_release>2022-07-20 00:00:00</date.prev_release>
+            <!-- in the previous release notes file under the 'documentation/' directory. -->
+        <date.prev_release>2025-06-02 00:00:00</date.prev_release>
     </properties>
 
     <dependencies>
@@ -161,7 +154,11 @@
             <artifactId>javax.servlet.jsp-api</artifactId>
             <version>2.3.3</version>
             <scope>provided</scope>
-              <exclusions>
+            <!-- Note: Because this dependency is provided, this exclusion doesn't actually do anything.
+                 But we include it so the convergence report will report 100% convergence.
+                 Deleting this does not cause the convergence check to fail.
+            -->
+            <exclusions>
                 <exclusion>
                     <groupId>javax.servlet</groupId>
                     <artifactId>javax.servlet-api</artifactId>
@@ -176,31 +173,23 @@
         <dependency>
             <groupId>xom</groupId>
             <artifactId>xom</artifactId>
-            <version>1.3.8</version>
+            <version>1.3.9</version>
             <exclusions>
-                <!-- excluded because we directly import newer versions. -->
-                <exclusion>
-                    <groupId>xalan</groupId>
-                    <artifactId>xalan</artifactId>
-                </exclusion>
                 <exclusion>
                     <!-- xom tries to pull this in, but a newer version is in Java 7 and later
-                         so we want to exclude this transitive dependency.
+                         so we want to exclude this transitive dependency. Don't need to include
+                         it explicity since we use the one from the JDK.
                     -->
                     <groupId>xerces</groupId>
                     <artifactId>xercesImpl</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>xml-apis</groupId>
-                    <artifactId>xml-apis</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
-            <!-- We need to use 1.9.4 (or later) here to address CVE-2014-0114 and CVE-2019-10086. -->
-            <version>1.9.4</version>
+            <!-- We need to use 1.11.0 (or later) here to address various CVEs. -->
+            <version>1.11.0</version>
             <!-- NOTE: commons-beanutils uses commons-collections 3.2.2. We use
                  commons-collections 4.2. Package names are different so this shouldn't
                  cause any problems as long as 3.x doesn't have any CVEs. May have to
@@ -217,6 +206,10 @@
                     <groupId>commons-logging</groupId>
                     <artifactId>commons-logging</artifactId>
                 </exclusion>
+                <!-- Note: Because the following dependency is marked as provided to commons-configuration,
+                     this exclusion doesn't actually do anything. But we include it so the convergence report
+                     will report 100% convergence. Deleting this does not cause the convergence check to fail.
+                -->
                 <exclusion>
                     <groupId>xml-apis</groupId>
                     <artifactId>xml-apis</artifactId>
@@ -231,9 +224,9 @@
         <dependency>
             <groupId>commons-fileupload</groupId>
             <artifactId>commons-fileupload</artifactId>
-            <version>1.4</version>
+            <version>1.6.0</version>
             <exclusions>
-                <!-- excluded because we directly import newer version. -->
+                <!-- excluded because we directly import newer version below. -->
                 <exclusion>
                     <groupId>commons-io</groupId>
                     <artifactId>commons-io</artifactId>
@@ -243,7 +236,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
-            <version>4.4</version>
+            <version>4.5.0-M2</version>
         </dependency>
         <dependency>
             <groupId>org.apache-extras.beanshell</groupId>
@@ -253,12 +246,24 @@
         <dependency>
             <groupId>org.owasp.antisamy</groupId>
             <artifactId>antisamy</artifactId>
-            <version>1.7.2</version>
+            <version>1.7.8</version>
+            <exclusions>
+                <!-- excluded because we directly import newer version below. -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <!-- excluded because commons-beanutils imports a newer version. -->
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>2.0.4</version>
+            <version>2.0.16</version>
         </dependency>
         <dependency>
             <groupId>xml-apis</groupId>
@@ -270,16 +275,6 @@
                 DO NOT UPDATE THIS DEPENDENCY
                  -->
             <version>1.4.01</version>
-        </dependency>
-
-        <!--
-             FORCE SPECIFIC VERSIONS OF TRANSITIVE DEPENDENCIES EXCLUDED ABOVE.
-             This is to force patched versions of these libraries with known CVEs against them.
-        -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.11.0</version>
         </dependency>
 
         <!-- SpotBugs dependencies -->
@@ -294,7 +289,7 @@
         <dependency>
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>1.15</version>
+            <version>1.17.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -311,8 +306,8 @@
         </dependency>
         <dependency>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
-            <version>1.70</version>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -424,22 +419,22 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-assembly-plugin</artifactId>
-                    <version>3.4.2</version>
+                    <version>3.7.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.3.0</version>
+                    <version>3.8.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
-                    <version>3.0.0-M7</version>
+                    <version>3.1.1</version>
                 </plugin>
                 <plugin>
                      <groupId>org.codehaus.mojo</groupId>
                      <artifactId>versions-maven-plugin</artifactId>
-                     <version>2.13.0</version>
+                     <version>2.18.0</version>
                      <configuration>
                          <rulesUri>file:${project.basedir}/versionRuleset.xml</rulesUri>
                      </configuration>
@@ -448,11 +443,21 @@
         </pluginManagement>
 
         <plugins>
+            <plugin>
+              <groupId>org.sonatype.central</groupId>
+              <artifactId>central-publishing-maven-plugin</artifactId>
+              <version>0.9.0</version>
+              <extensions>true</extensions>
+              <configuration>
+                <deploymentName>${project.name}-${project.version}</deploymentName>
+                <publishingServerId>central</publishingServerId>
+              </configuration>
+            </plugin>
                 <!-- Create SBOM -->
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
-                <version>2.7.3</version>
+                <version>2.9.1</version>
                 <executions>
                   <execution>
                     <phase>package</phase>
@@ -488,19 +493,24 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-changelog-plugin</artifactId>
-                <version>2.3</version>
+                    <!-- 3.0.0-M1 is a "milestone" release, which is generally
+                         to an alpha or beta release. Normally we would avoid
+                         those, but generating a changelog is not an essential
+                         task, so we're fine with this.
+                    -->
+                <version>3.0.0-M1</version>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-clean-plugin</artifactId>
-                <version>3.2.0</version>
+                <version>3.5.0</version>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.10.1</version>
+                <version>3.14.0</version>
                 <configuration>
                     <source>${project.java.target}</source>
                     <target>${project.java.target}</target>
@@ -533,12 +543,6 @@
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-deploy-plugin</artifactId>
-                <version>3.0.0</version>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-eclipse-plugin</artifactId>
                 <version>2.10</version>
                 <configuration>
@@ -549,31 +553,29 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.5.0</version>
                 <dependencies>
                   <dependency>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>extra-enforcer-rules</artifactId>
-                    <version>1.6.0</version>
+                    <version>1.10.0</version>
                   </dependency>
                   <dependency>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>animal-sniffer-enforcer-rule</artifactId>
-                    <version>1.21</version>
+                    <version>1.24</version>
                   </dependency>
-
                 </dependencies>
+
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
-                        <goals>
-                          <goal>enforce</goal>
-                        </goals>
+                        <goals><goal>enforce</goal></goals>
                         <configuration>
                           <rules>
                             <requireMavenVersion>
-                              <version>[3.3.9,)</version>
-                              <message>Building ESAPI 2.x now requires Maven 3.3.9 or later.</message>
+                              <version>[3.6.3,)</version>
+                              <message>Building ESAPI 2.x now requires Maven 3.6.3 or later.</message>
                             </requireMavenVersion>
                           </rules>
                         </configuration>
@@ -592,7 +594,7 @@
                                 JAVA_HOME environment variable is pointed to a JDK1.8 or later distribution.
                             </message>
                           </requireJavaVersion>
-                           <enforceBytecodeVersion>
+                          <enforceBytecodeVersion>
                             <maxJdkVersion>${project.java.target}</maxJdkVersion>
                             <ignoreOptionals>true</ignoreOptionals>
                             <ignoredScopes/><!--  'test' scopes not ignored so we can actually test on Java 8. -->
@@ -625,7 +627,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-gpg-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.2.7</version>
                 <executions>
                   <execution>
                     <id>sign-artifacts</id>
@@ -638,13 +640,13 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-install-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.1.4</version>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.4.2</version>
                 <configuration>
                     <archive>
                         <manifest>
@@ -656,12 +658,12 @@
             </plugin>
 
             <plugin>
-               <groupId>org.apache.maven.plugins</groupId>
-               <artifactId>maven-javadoc-plugin</artifactId>
-               <version>3.4.1</version>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.11.2</version>
                <configuration>
                  <source>8</source>
-                 <doclint>none</doclint>
+                 <doclint>none</doclint>    <!-- none, missing, simple, or all -->
                </configuration>
                <!-- generate esapi-VERSION.javadoc.jar -->
                <executions>
@@ -676,44 +678,46 @@
             <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-jxr-plugin</artifactId>
-              <version>3.3.0</version>
+              <version>3.6.0</version>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.19.0</version>
+                <version>3.27.0</version>
             </plugin>
 
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-project-info-reports-plugin</artifactId>
-               <version>3.4.1</version>
+               <version>3.9.0</version>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.3.1</version>
             </plugin>
 
             <plugin>
-                <!-- Note: This uses the maven-fluido-skin version specified next. The skin is referenced in src/site/site.xml. -->
+                <!-- Note: This uses the maven-fluido-skin version specified next.
+                     The skin is referenced in src/site/site.xml. -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
-                <version>4.0.0-M3</version>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.skins</groupId>
-                <artifactId>maven-fluid-skin</artifactId>
-                <version>1.11.1</version>
+                <version>4.0.0-M16</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.skins</groupId>
+                        <artifactId>maven-fluido-skin</artifactId>
+                        <version>${version.fluido}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
                <groupId>org.apache.maven.plugins</groupId>
                <artifactId>maven-source-plugin</artifactId>
-               <version>3.2.1</version>
+               <version>3.3.1</version>
                <executions>
                  <execution>
                    <id>attach-sources</id>
@@ -761,15 +765,28 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>7.3.2</version>
+                <!-- Version 12.x is the latest, but 10.0.4 is the latest that we can use beccause 11.x has a breaking
+                     change that requires Java 11 or later and our mimimal JDK is Java 8.
+                -->
+                <!-- Note: As of 2025-05-18, I (kwwall) unable to get:
+                        $ mvn -B org.owasp:dependency-check-maven:check
+                    to work with OpenJDK 8 even though this same version of the Dependency Check plugin worked the previous
+                    ESAPI release last November. I do not have time presently to track the reason for this down, but will
+                    try to follow up with the OWASP Depencency Check team. In the meantime, I thought I would mention it
+                    in case someone else tried it and ran into the problem. It is non-essential though, since I also use
+                    GHAS Dependabot and Snyk SCA tools to monitor unpatched vulnerabilities in ESAPI dependencies.
+                -->
+                <version>10.0.4</version>
                 <configuration>
+                    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
                     <failBuildOnCVSS>1.0</failBuildOnCVSS>
                     <suppressionFiles>./suppressions.xml</suppressionFiles>
                 </configuration>
                 <executions>
                     <execution>
                         <goals>
-                            <goal>check</goal>
+                            <goal>purge</goal>
+                            <!-- <goal>check</goal> -->
                         </goals>
                     </execution>
                 </executions>
@@ -780,8 +797,8 @@
 
     <reporting>
         <plugins>
-	     <plugin>
-	            <groupId>io.github.weblegacy</groupId>
+         <plugin>
+                <groupId>io.github.weblegacy</groupId>
                 <artifactId>taglib-maven-plugin</artifactId>
             </plugin>
             <plugin>
@@ -792,7 +809,7 @@
                     <issueLinkUrl>https://github.com/ESAPI/esapi-java-legacy/issues/%ISSUE%</issueLinkUrl>
                     <type>date</type>
                     <dates>
-                        <!-- TODO: Be sure to update. Should be date of previous official release -->
+                        <!-- TODO: Be sure to update. Should be date of 10revious official release -->
                         <!-- Exact date should be in previous release notes file under 'documentation/' directory. -->
                         <date>${date.prev_release}</date>
                     </dates>
@@ -955,6 +972,75 @@
                     </plugin>
             -->
 
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>jakarta</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.eclipse.transformer</groupId>
+                        <artifactId>transformer-maven-plugin</artifactId>
+                        <version>0.5.0</version>    <!-- 1.0.0 is available, but requires newer JDK than ESAPI minimum. -->
+                        <extensions>true</extensions>
+                        <configuration>
+                            <rules>
+                                <jakartaDefaults>true</jakartaDefaults>
+                            </rules>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>default-jar</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <classifier>jakarta</classifier>
+                                    <artifact>
+                                        <groupId>org.owasp.esapi</groupId>
+                                        <artifactId>esapi</artifactId>
+                                        <version>${project.version}</version>
+                                    </artifact>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>javadoc-jar</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <skip>false</skip>
+                                    <classifier>jakarta-javadoc</classifier>
+                                    <artifact>
+                                        <groupId>org.owasp.esapi</groupId>
+                                        <artifactId>esapi</artifactId>
+                                        <version>${project.version}</version>
+                                        <classifier>javadoc</classifier>
+                                    </artifact>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>source-jar</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                                <configuration>
+                                    <skip>false</skip>
+                                    <classifier>jakarta-sources</classifier>
+                                    <artifact>
+                                        <groupId>org.owasp.esapi</groupId>
+                                        <artifactId>esapi</artifactId>
+                                        <version>${project.version}</version>
+                                        <classifier>sources</classifier>
+                                    </artifact>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                 </plugins>
             </build>
         </profile>
